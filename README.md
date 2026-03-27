@@ -37,10 +37,13 @@ cd fmv-calculation-ig
 python -m venv .venv
 
 ## Activate venv
-.venv\Scripts\activate.ps1 # Windows
-### If this fails on Windows, you may need to allow scripts in terminal with the following line: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+### For Windows:
+.venv\Scripts\activate.ps1
+### If this fails, you may need to allow scripts in terminal with the following line:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
-source .venv/bin/activate # Mac/Linux
+### For Mac/Linux:
+source .venv/bin/activate
 
 ## Install dependences
 pip install -r requirements.txt
@@ -48,7 +51,7 @@ pip install -r requirements.txt
 ## Run the app
 uvicorn main:app --reload
 
-## Open app in browser
+## Open app in browser for local testing
 http://127.0.0.1:8000
 
 ## Repository Structure
