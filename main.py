@@ -25,7 +25,7 @@ def root():
                 padding: 40px;
                 border-radius: 12px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                width: 500px;
+                width: 550px;
                 text-align: center;
             }
             .row {
@@ -34,7 +34,7 @@ def root():
                 margin-bottom: 10px;
                 justify-content: center;
             }
-            input[type=text], input[type=date] {
+            input[type=text], input[type=date], input[type=number] {
                 padding: 10px;
                 border-radius: 6px;
                 border: 1px solid #d1d5db;
@@ -78,11 +78,11 @@ def root():
                     <div class="row">
                         <input type="text" name="ticker" placeholder="Ticker (AAPL)">
                         <input type="date" name="date">
+                        <input type="number" step="any" name="quantity" placeholder="Shares (e.g. 5)">
                     </div>
                 </div>
 
                 <button type="button" class="add-btn" onclick="addRow()">+ Add Row</button><br>
-
                 <input type="submit" value="Calculate FMV" class="submit-btn">
             </form>
         </div>
@@ -97,6 +97,7 @@ def root():
             div.innerHTML = `
                 <input type="text" name="ticker" placeholder="Ticker (AAPL)">
                 <input type="date" name="date">
+                <input type="number" step="any" name="quantity" placeholder="Shares (e.g. 5)">
                 <button type="button" onclick="this.parentElement.remove()">Remove</button>
             `;
 
@@ -110,22 +111,30 @@ def root():
 @app.post("/fmv", response_class=HTMLResponse)
 def fmv_form(
     ticker: List[str] = Form(...),
-    date: List[str] = Form(...)
+    date: List[str] = Form(...),
+    quantity: List[float] = Form(...)
 ):
     results = []
 
-    for t, d in zip(ticker, date):
+    for t, d, q in zip(ticker, date, quantity):
         if not t.strip() or not d.strip():
             results.append({
                 "ticker": "Invalid",
                 "date_used": d,
                 "high": "-",
                 "low": "-",
-                "fmv": "Missing Input"
+                "fmv": "Missing Input",
+                "quantity": q or "-",
+                "total_value": "-"
             })
             continue
 
-        result = get_fmv(t, d)
+        try:
+            q_val = float(q) if q else 0
+        except:
+            q_val = 0
+
+        result = get_fmv(t, d, q_val)
 
         if result:
             results.append(result)
@@ -135,7 +144,9 @@ def fmv_form(
                 "date_used": d,
                 "high": "N/A",
                 "low": "N/A",
-                "fmv": "No Data"
+                "fmv": "No Data",
+                "quantity": q_val,
+                "total_value": "No Data"
             })
 
     table_rows = ""
@@ -147,6 +158,8 @@ def fmv_form(
             <td>{r['high']}</td>
             <td>{r['low']}</td>
             <td>{r['fmv']}</td>
+            <td>{r['quantity']}</td>
+            <td>{r['total_value'] if r['total_value'] is not None else '-'}</td>
         </tr>
         """
 
@@ -167,7 +180,7 @@ def fmv_form(
                 padding: 40px;
                 border-radius: 12px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                width: 700px;
+                width: 800px;
                 text-align: center;
             }}
             table {{
@@ -200,6 +213,8 @@ def fmv_form(
                     <th>High</th>
                     <th>Low</th>
                     <th>FMV</th>
+                    <th>Quantity</th>
+                    <th>Tax Deductible Amount</th>
                 </tr>
                 {table_rows}
             </table>
