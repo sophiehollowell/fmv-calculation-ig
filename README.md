@@ -37,8 +37,10 @@ cd fmv-calculation-ig
 python -m venv .venv
 
 ## Activate venv
-.venv\Scripts\activate # Windows
+.venv\Scripts\activate.ps1 # Windows
+### If this fails on Windows, you may need to allow scripts in terminal with the following line: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
+source .venv/bin/activate # Mac/Linux
 
 ## Install dependences
 pip install -r requirements.txt
@@ -57,3 +59,10 @@ fmv-calculation-ig/
 ├── requirements.txt   # Dependencies
 └── README.md
 ```
+### Deployment
+This app can be deployed using platforms like:
+* Render
+* Replit
+* Railway
+
+Once deployed, the tool can be shared via URL!
