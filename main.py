@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
+from typing import List
 from fmv_functions import get_fmv
 
 app = FastAPI()
@@ -14,7 +15,6 @@ def root():
             body {
                 font-family: 'Helvetica', sans-serif;
                 background-color: #f9fafb;
-                color: #111827;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -25,27 +25,37 @@ def root():
                 padding: 40px;
                 border-radius: 12px;
                 box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                width: 400px;
+                width: 500px;
                 text-align: center;
             }
+            .row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 10px;
+                justify-content: center;
+            }
             input[type=text], input[type=date] {
-                width: 80%;
                 padding: 10px;
-                margin: 10px 0;
                 border-radius: 6px;
                 border: 1px solid #d1d5db;
+                width: 150px;
             }
-            input[type=submit] {
-                background-color: #6366f1;
-                color: white;
-                border: none;
-                padding: 10px 20px;
+            button {
+                padding: 8px 12px;
                 border-radius: 6px;
+                border: none;
                 cursor: pointer;
-                font-weight: bold;
+            }
+            .add-btn {
+                background-color: #e5e7eb;
                 margin-top: 10px;
             }
-            input[type=submit]:hover {
+            .submit-btn {
+                background-color: #6366f1;
+                color: white;
+                margin-top: 20px;
+            }
+            .submit-btn:hover {
                 background-color: #4f46e5;
             }
             h1 {
@@ -60,56 +70,72 @@ def root():
     </head>
     <body>
         <div class="container">
-            <img class="logo" src="https://media.licdn.com/dms/image/v2/D4E0BAQGbPCneStvFWA/company-logo_200_200/B4EZYVri5.GYAI-/0/1744120459243/infinite_giving_logo?e=2147483647&v=beta&t=jeA4JjajxPeOld2QDnroyVJ6x2EsrWeCz_9q17ZoQhk" alt="Infinite Giving Logo">
+            <img class="logo" src="https://media.licdn.com/dms/image/v2/D4E0BAQGbPCneStvFWA/company-logo_200_200/B4EZYVri5.GYAI-/0/1744120459243/infinite_giving_logo?e=2147483647&v=beta&t=jeA4JjajxPeOld2QDnroyVJ6x2EsrWeCz_9q17ZoQhk">
             <h1>FMV Calculator</h1>
+
             <form action="/fmv" method="post">
-                <textarea name="bulk_input" rows="6" style="width: 90%;" placeholder="Enter one per line:&#10;AAPL, 2024-03-01&#10;TSLA, 2024-03-02"></textarea><br>
-                <input type="submit" value="Calculate FMV">
+                <div id="rows">
+                    <div class="row">
+                        <input type="text" name="ticker" placeholder="Ticker (AAPL)">
+                        <input type="date" name="date">
+                    </div>
+                </div>
+
+                <button type="button" class="add-btn" onclick="addRow()">+ Add Row</button><br>
+
+                <input type="submit" value="Calculate FMV" class="submit-btn">
             </form>
         </div>
+
+        <script>
+        function addRow() {
+            const container = document.getElementById("rows");
+
+            const div = document.createElement("div");
+            div.className = "row";
+
+            div.innerHTML = `
+                <input type="text" name="ticker" placeholder="Ticker (AAPL)">
+                <input type="date" name="date">
+                <button type="button" onclick="this.parentElement.remove()">Remove</button>
+            `;
+
+            container.appendChild(div);
+        }
+        </script>
     </body>
     </html>
     """
 
 @app.post("/fmv", response_class=HTMLResponse)
-def fmv_form(bulk_input: str = Form(...)):
-    
-    if not bulk_input.strip():
-        return """
-        <html>
-            <body style="font-family: Helvetica; text-align:center; padding:50px;">
-                <h3>No input provided.</h3>
-                <p>Please enter at least one ticker and date.</p>
-                <a href="/">Calculate Another</a>
-            </body>
-        </html>
-        """
-
-    rows = bulk_input.strip().split("\n")
+def fmv_form(
+    ticker: List[str] = Form(...),
+    date: List[str] = Form(...)
+):
     results = []
 
-    for row in rows:
-        try:
-            ticker, date = [x.strip() for x in row.split(",")]
-            result = get_fmv(ticker, date)
-
-            if result:
-                results.append(result)
-            else:
-                results.append({
-                    "ticker": ticker.upper(),
-                    "date_used": date,
-                    "high": "N/A",
-                    "low": "N/A",
-                    "fmv": "No Data"
-                })
-        except:
+    for t, d in zip(ticker, date):
+        if not t.strip() or not d.strip():
             results.append({
                 "ticker": "Invalid",
-                "date_used": row,
+                "date_used": d,
                 "high": "-",
                 "low": "-",
-                "fmv": "Formatting Error"
+                "fmv": "Missing Input"
+            })
+            continue
+
+        result = get_fmv(t, d)
+
+        if result:
+            results.append(result)
+        else:
+            results.append({
+                "ticker": t.upper(),
+                "date_used": d,
+                "high": "N/A",
+                "low": "N/A",
+                "fmv": "No Data"
             })
 
     table_rows = ""
@@ -123,63 +149,63 @@ def fmv_form(bulk_input: str = Form(...)):
             <td>{r['fmv']}</td>
         </tr>
         """
-        
+
     return f"""
     <html>
-        <head>
-            <title>FMV Results</title>
-            <style>
-                body {{
-                    font-family: 'Helvetica', sans-serif;
-                    background-color: #f9fafb;
-                    display: flex;
-                    justify-content: center;
-                    padding: 50px;
-                }}
-                .container {{
-                    background-color: white;
-                    padding: 40px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    width: 700px;
-                    text-align: center;
-                }}
-                table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                }}
-                th, td {{
-                    border: 1px solid #ddd;
-                    padding: 10px;
-                    text-align: center;
-                }}
-                th {{
-                    background-color: #4f46e5;
-                    color: white;
-                }}
-                a {{
-                    color: #6366f1;
-                    text-decoration: none;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h2>FMV Results</h2>
-                <table>
-                    <tr>
-                        <th>Ticker</th>
-                        <th>Date Used</th>
-                        <th>High</th>
-                        <th>Low</th>
-                        <th>FMV</th>
-                    </tr>
-                    {table_rows}
-                </table>
-                <br>
-                <a href="/">Calculate Another</a>
-            </div>
-        </body>
+    <head>
+        <title>FMV Results</title>
+        <style>
+            body {{
+                font-family: 'Helvetica', sans-serif;
+                background-color: #f9fafb;
+                display: flex;
+                justify-content: center;
+                padding: 50px;
+            }}
+            .container {{
+                background-color: white;
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                width: 700px;
+                text-align: center;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }}
+            th, td {{
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: center;
+            }}
+            th {{
+                background-color: #4f46e5;
+                color: white;
+            }}
+            a {{
+                color: #6366f1;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>FMV Results</h2>
+            <table>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Date Used</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>FMV</th>
+                </tr>
+                {table_rows}
+            </table>
+            <br>
+            <a href="/">Calculate Another</a>
+        </div>
+    </body>
     </html>
     """
